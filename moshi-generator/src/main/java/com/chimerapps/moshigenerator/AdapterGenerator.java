@@ -107,7 +107,8 @@ public class AdapterGenerator {
 		}
 		builder.addStatement("reader.beginObject()");
 		builder.beginControlFlow("while (reader.hasNext())");
-		builder.beginControlFlow("switch (reader.nextName())");
+		builder.addStatement("final $T _name = reader.nextName()", ClassName.get(String.class));
+		builder.beginControlFlow("switch (_name)");
 		for (final VariableElement variableElement : fields) {
 
 			builder.add("case $S: ", variableElement.getSimpleName().toString());
