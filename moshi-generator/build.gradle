@@ -1,23 +1,12 @@
+plugins {
+    id "com.jfrog.bintray" version "1.7.3"
+}
+
 group 'com.chimerapps'
 version '0.1.0'
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.5'
-    distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
-
 apply plugin: 'java'
 apply plugin: 'maven-publish'
-
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     compile 'com.google.auto.service:auto-service:1.0-rc3'
@@ -33,7 +22,7 @@ def pomConfig = {
             name "The Apache Software License, Version 2.0"
             url "http://www.apache.org/licenses/LICENSE-2.0.txt"
             distribution "repo"
-        }na
+        } na
     }
     developers {
         developer {
@@ -44,6 +33,23 @@ def pomConfig = {
     }
 }
 
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    pkg {
+        repo = 'maven'
+        name = 'moshi-generator'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/Chimerapps/moshi-generator'
+
+        version {
+            name = "$ARTIFACT_VERSION"
+            desc = "Moshi adapter generator"
+            released = new Date()
+        }
+    }
+    publications = ['MyPublication']
+}
 
 publishing {
     publications {
@@ -57,7 +63,7 @@ publishing {
                 def root = asNode()
                 root.appendNode('description', 'Annotation processor that generates moshi adapters')
                 root.appendNode('name', 'moshi-generator')
-                root.appendNode('url', 'https://github.com/icapps/niddler')
+                root.appendNode('url', 'https://github.com/Chimerapps/moshi-generator')
                 root.children().last() + pomConfig
             }
         }
