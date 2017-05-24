@@ -1,0 +1,60 @@
+group 'com.chimerapps'
+version '0.1.0'
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.5'
+    distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            name "Nicola Verbeeck"
+            email "nicola@chimerapps.com"
+            organization "Chimerapps"
+        }
+    }
+}
+
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            groupId "$ARTIFACT_PACKAGE"
+            version "$ARTIFACT_VERSION"
+            artifactId "$ARTIFACT_NAME"
+            from components.java
+
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Annotation processor that generates moshi adapters. Runtime library')
+                root.appendNode('name', 'moshi-generator')
+                root.appendNode('url', 'https://github.com/chimerapps/moshi-generator')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
