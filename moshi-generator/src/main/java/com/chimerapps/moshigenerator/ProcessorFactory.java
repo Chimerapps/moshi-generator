@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2017 - Chimerapps BVBA
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package com.chimerapps.moshigenerator;
 
 import com.google.auto.service.AutoService;
@@ -23,10 +39,11 @@ import java.util.logging.Logger;
  * @author Nicola Verbeeck
  *         Date 23/05/2017
  */
+@SuppressWarnings("unused")
 @AutoService(Processor.class)
 public class ProcessorFactory extends AbstractProcessor {
 
-	private static Logger logger = Logger.getLogger(ProcessorFactory.class.getSimpleName());
+	private static final Logger logger = Logger.getLogger(ProcessorFactory.class.getSimpleName());
 	private Filer filer;
 	private Messager messager;
 
@@ -38,7 +55,7 @@ public class ProcessorFactory extends AbstractProcessor {
 		logger.info("Starting processing round");
 		messager.printMessage(Diagnostic.Kind.NOTE, "Processing starting");
 
-		for (Element element : roundEnv.getElementsAnnotatedWith(Moshi.class)) {
+		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateMoshi.class)) {
 			if (element.getKind() != ElementKind.CLASS) {
 				messager.printMessage(Diagnostic.Kind.ERROR, "Only classes can be annotated with @Moshi (" + element.getSimpleName() + ")");
 				return true;
@@ -66,7 +83,7 @@ public class ProcessorFactory extends AbstractProcessor {
 
 	@Override
 	public Set<String> getSupportedAnnotationTypes() {
-		return new HashSet<>(Collections.singletonList(Moshi.class.getCanonicalName()));
+		return new HashSet<>(Collections.singletonList(GenerateMoshi.class.getCanonicalName()));
 	}
 
 	@Override
