@@ -19,8 +19,9 @@ import java.util.Set;
 
 /**
  * @author Nicola Verbeeck
- * @date 23/05/2017.
+ *         Date 23/05/2017.
  */
+@SuppressWarnings("WeakerAccess")
 public class AdapterGenerator {
 
 	private final MoshiAnnotatedClass mClazz;
@@ -46,6 +47,9 @@ public class AdapterGenerator {
 		adapterClassBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
 		adapterClassBuilder.addField(FieldSpec.builder(Moshi.class, "moshi", Modifier.PRIVATE, Modifier.FINAL).build());
+		adapterClassBuilder.addField(FieldSpec.builder(JsonAdapter.Factory.class, "factory", Modifier.PRIVATE, Modifier.FINAL).build());
+		adapterClassBuilder.addField(FieldSpec.builder(Type.class, "type", Modifier.PRIVATE, Modifier.FINAL).build());
+		adapterClassBuilder.addField(FieldSpec.builder(ParameterizedTypeName.get(ClassName.get(Set.class), WildcardTypeName.subtypeOf(Annotation.class)), "annotations", Modifier.PRIVATE, Modifier.FINAL).build());
 		adapterClassBuilder.addMethod(constructor);
 		adapterClassBuilder.addMethod(from);
 		adapterClassBuilder.addMethod(to);
@@ -64,7 +68,7 @@ public class AdapterGenerator {
 				.returns(TypeName.VOID)
 				.addParameter(ParameterSpec.builder(JsonWriter.class, "writer", Modifier.FINAL).build())
 				.addParameter(ParameterSpec.builder(ClassName.get(mClazz.getElement()), "value", Modifier.FINAL).build())
-				.addCode(CodeBlock.builder().build())
+				.addCode(CodeBlock.builder().addStatement("moshi.nextAdapter(factory, type, annotations).toJson(writer, value)").build())
 				.build();
 	}
 
@@ -82,7 +86,13 @@ public class AdapterGenerator {
 	private MethodSpec createConstructor() {
 		return MethodSpec.constructorBuilder()
 				.addParameter(com.squareup.moshi.Moshi.class, "moshi", Modifier.FINAL)
+				.addParameter(JsonAdapter.Factory.class, "factory", Modifier.FINAL)
+				.addParameter(Type.class, "type", Modifier.FINAL)
+				.addParameter(ParameterizedTypeName.get(ClassName.get(Set.class), WildcardTypeName.subtypeOf(Annotation.class)), "annotations", Modifier.FINAL)
 				.addStatement("this.moshi = moshi")
+				.addStatement("this.factory = factory")
+				.addStatement("this.type = type")
+				.addStatement("this.annotations = annotations")
 				.build();
 	}
 
@@ -115,7 +125,7 @@ public class AdapterGenerator {
 			generateReader(builder, variableElement);
 			builder.addStatement("break");
 		}
-		builder.add("default:");
+		builder.addStatement("default: reader.skipValue()");
 		builder.endControlFlow();
 		builder.endControlFlow();
 		builder.addStatement("reader.endObject()");
@@ -199,7 +209,7 @@ public class AdapterGenerator {
 
 		builder.beginControlFlow("if (type == $T.class)", ClassName.get(mClazz.getElement()));
 
-		builder.addStatement("return new $T(moshi)", ClassName.bestGuess(mClazz.getElement().getQualifiedName().toString() + "Adapter"));
+		builder.addStatement("return new $T(moshi, this, type, annotations)", ClassName.bestGuess(mClazz.getElement().getQualifiedName().toString() + "Adapter"));
 
 		builder.endControlFlow();
 		builder.addStatement("return null");

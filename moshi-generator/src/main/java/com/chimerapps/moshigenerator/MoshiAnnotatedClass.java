@@ -15,8 +15,9 @@ import java.util.List;
 
 /**
  * @author Nicola Verbeeck
- * @date 23/05/2017.
+ *         Date 23/05/2017.
  */
+@SuppressWarnings("WeakerAccess")
 public class MoshiAnnotatedClass {
 
 	private final TypeElement mElement;

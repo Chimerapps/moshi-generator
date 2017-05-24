@@ -12,7 +12,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.Collections;
@@ -20,6 +19,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
+/**
+ * @author Nicola Verbeeck
+ *         Date 23/05/2017
+ */
 @AutoService(Processor.class)
 public class ProcessorFactory extends AbstractProcessor {
 
@@ -43,7 +46,7 @@ public class ProcessorFactory extends AbstractProcessor {
 
 			TypeElement typeElement = (TypeElement) element;
 			final MoshiAnnotatedClass clazz = new MoshiAnnotatedClass(typeElement, messager);
-			if (!clazz.isValid()){
+			if (!clazz.isValid()) {
 				return true;
 			}
 
