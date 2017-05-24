@@ -188,7 +188,7 @@ public class AdapterGenerator {
 			method = "nextDouble";
 		}
 
-		if (builder != null) {
+		if (method != null) {
 			builder.addStatement("$N = reader.$N()", variableElement.getSimpleName().toString(), method);
 		}
 	}
