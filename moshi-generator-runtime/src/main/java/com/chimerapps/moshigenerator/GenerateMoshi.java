@@ -22,8 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Marks this class for generating a moshi adapter. Classes annotated with this annotation must have a single constructor
+ * taking all the fields of that class. No fields will be set outside of this constructor
+ *
  * @author Nicola Verbeeck
- * @date 23/05/2017.
+ *         Date 23/05/2017.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)

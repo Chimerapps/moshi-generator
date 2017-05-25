@@ -33,6 +33,14 @@ def pomConfig = {
     }
 }
 
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+task packageJavadoc(type: Jar, dependsOn: 'javadoc') {
+    from javadoc.destinationDir
+}
+
 bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
@@ -58,6 +66,13 @@ publishing {
             version "$ARTIFACT_VERSION"
             artifactId "$ARTIFACT_NAME"
             from components.java
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+            artifact packageJavadoc {
+                classifier "javadoc"
+            }
 
             pom.withXml {
                 def root = asNode()
