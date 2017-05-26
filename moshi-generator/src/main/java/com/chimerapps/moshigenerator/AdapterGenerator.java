@@ -53,14 +53,9 @@ public class AdapterGenerator {
 		final MethodSpec to = createToJson();
 		final MethodSpec constructor = createConstructor();
 
-		final TypeSpec.Builder factoryClassBuilder = TypeSpec.classBuilder(mClazz.getElement().getSimpleName().toString() + "AdapterFactory");
-		factoryClassBuilder.addSuperinterface(JsonAdapter.Factory.class);
-		factoryClassBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
-		factoryClassBuilder.addMethod(createFactoryMethod());
-
 		final TypeSpec.Builder adapterClassBuilder = TypeSpec.classBuilder(mClazz.getElement().getSimpleName().toString() + "Adapter");
 		adapterClassBuilder.superclass(ParameterizedTypeName.get(ClassName.get(JsonAdapter.class), ClassName.get(mClazz.getElement())));
-		adapterClassBuilder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+		adapterClassBuilder.addModifiers(Modifier.PUBLIC);
 
 		adapterClassBuilder.addField(FieldSpec.builder(Moshi.class, "moshi", Modifier.PRIVATE, Modifier.FINAL).build());
 		adapterClassBuilder.addField(FieldSpec.builder(JsonAdapter.Factory.class, "factory", Modifier.PRIVATE, Modifier.FINAL).build());
@@ -70,7 +65,15 @@ public class AdapterGenerator {
 		adapterClassBuilder.addMethod(from);
 		adapterClassBuilder.addMethod(to);
 
-		JavaFile.builder(mClazz.getPackage(), factoryClassBuilder.build()).indent("\t").build().writeTo(mFiler);
+		if (mClazz.generatesFactory()) {
+			final TypeSpec.Builder factoryClassBuilder = TypeSpec.classBuilder(mClazz.getElement().getSimpleName().toString() + "AdapterFactory");
+			factoryClassBuilder.addSuperinterface(JsonAdapter.Factory.class);
+			factoryClassBuilder.addModifiers(Modifier.PUBLIC);
+			factoryClassBuilder.addMethod(createFactoryMethod());
+
+			JavaFile.builder(mClazz.getPackage(), factoryClassBuilder.build()).indent("\t").build().writeTo(mFiler);
+		}
+
 		JavaFile.builder(mClazz.getPackage(), adapterClassBuilder.build())
 				.indent("\t")
 				.build().writeTo(mFiler);
@@ -249,6 +252,8 @@ public class AdapterGenerator {
 			}
 			builder.append(')');
 			return builder.toString();
+		} else if (typeName instanceof WildcardTypeName) {
+			return makeType(((WildcardTypeName) typeName).upperBounds.get(0));
 		} else {
 			return typeName.toString() + ".class";
 		}

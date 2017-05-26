@@ -94,4 +94,7 @@ public class MoshiAnnotatedClass {
 		return new ArrayList<>(constructor.getParameters());
 	}
 
+	public boolean generatesFactory() {
+		return mElement.getAnnotation(GenerateMoshi.class).generateFactory();
+	}
 }

@@ -31,4 +31,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
 public @interface GenerateMoshi {
+
+	/**
+	 * Flag indicating if the code generator should create a moshi factory that creates the adapter
+	 */
+	boolean generateFactory() default true;
+
 }

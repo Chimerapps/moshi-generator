@@ -16,13 +16,10 @@
 
 package com.chimerapps.moshigenerator;
 
-import com.google.auto.service.AutoService;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -30,8 +27,10 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -40,7 +39,6 @@ import java.util.logging.Logger;
  *         Date 23/05/2017
  */
 @SuppressWarnings("unused")
-@AutoService(Processor.class)
 public class ProcessorFactory extends AbstractProcessor {
 
 	private static final Logger logger = Logger.getLogger(ProcessorFactory.class.getSimpleName());
@@ -55,6 +53,7 @@ public class ProcessorFactory extends AbstractProcessor {
 		logger.info("Starting processing round");
 		messager.printMessage(Diagnostic.Kind.NOTE, "Processing starting");
 
+		final List<MoshiAnnotatedClass> classes = new ArrayList<>();
 		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateMoshi.class)) {
 			if (element.getKind() != ElementKind.CLASS) {
 				messager.printMessage(Diagnostic.Kind.ERROR, "Only classes can be annotated with @Moshi (" + element.getSimpleName() + ")");
@@ -66,6 +65,8 @@ public class ProcessorFactory extends AbstractProcessor {
 			if (!clazz.isValid()) {
 				return true;
 			}
+			classes.add(clazz);
+			messager.printMessage(Diagnostic.Kind.NOTE, "Processing class: " + clazz.getElement().getQualifiedName());
 
 			try {
 				new AdapterGenerator(clazz, filer).generate();

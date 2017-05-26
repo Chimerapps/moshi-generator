@@ -1,5 +1,6 @@
 include ':moshi-generator'
 include ':moshi-generator-runtime'
+include ':example'
 
 rootProject.name = 'moshi-generator'
 
