@@ -33,8 +33,10 @@ import java.lang.annotation.Target;
 public @interface GenerateMoshi {
 
 	/**
-	 * Flag indicating if the code generator should create a moshi factory that creates the adapter
+	 * Flag indicating if the code generator should create a separate moshi factory that creates the adapter.
+	 *
+	 * @return True if the processor should create a separate moshi factory fot this class/adapter
 	 */
-	boolean generateFactory() default true;
+	boolean generateFactory() default false;
 
 }
