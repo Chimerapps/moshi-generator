@@ -17,10 +17,7 @@
 package com.chimerapps.moshigenerator
 
 import com.squareup.javapoet.*
-import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.JsonReader
-import com.squareup.moshi.JsonWriter
-import com.squareup.moshi.Moshi
+import com.squareup.moshi.*
 import java.io.IOException
 import java.lang.reflect.Type
 import javax.annotation.processing.Filer
@@ -45,6 +42,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         adapterClassBuilder.superclass(ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), ClassName.get(clazz.element)))
         adapterClassBuilder.addModifiers(Modifier.PUBLIC)
         adapterClassBuilder.addOriginatingElement(clazz.element)
+        adapterClassBuilder.addJavadoc("Generated using moshi-generator")
 
         adapterClassBuilder.addField(FieldSpec.builder(Moshi::class.java, "moshi", Modifier.PRIVATE, Modifier.FINAL).build())
         adapterClassBuilder.addField(FieldSpec.builder(JsonAdapter.Factory::class.java, "factory", Modifier.PRIVATE, Modifier.FINAL).build())
@@ -116,8 +114,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         builder.addStatement("final \$T _name = reader.nextName()", ClassName.get(String::class.java))
         builder.beginControlFlow("switch (_name)")
         for (variableElement in fields) {
-
-            builder.add("case \$S: ", variableElement.simpleName.toString())
+            builder.add("case \$S: ", getJsonFieldName(variableElement))
             generateReader(builder, variableElement)
             builder.addStatement("break")
         }
@@ -145,7 +142,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         for (field in fields) {
             if (!isNullable(field)) { //No annotation -> required
                 builder.beginControlFlow("if (\$N == null)", field.simpleName.toString())
-                builder.addStatement("throw new \$T(\$S)", ClassName.get(IOException::class.java), field.simpleName.toString() + " is non-optional but was not found in the json")
+                builder.addStatement("throw new \$T(\$S)", ClassName.get(IOException::class.java), getJsonFieldName(field) + " is non-optional but was not found in the json")
                 builder.endControlFlow()
             }
         }
@@ -232,6 +229,11 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
             }
         }
         return false
+    }
+
+    private fun getJsonFieldName(variableElement: VariableElement): String {
+        val annotation = variableElement.getAnnotation(Json::class.java) ?: return variableElement.simpleName.toString()
+        return annotation.name
     }
 
     companion object {

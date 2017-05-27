@@ -18,6 +18,7 @@ package com.chimerapps.moshigenerator.example
 
 import com.chimerapps.moshigenerator.GenerateMoshi
 import com.chimerapps.moshigenerator.GenerateMoshiFactory
+import com.squareup.moshi.Json
 
 /**
  * @author Nicola Verbeeck
@@ -34,4 +35,4 @@ data class Generics(val persons: Map<String, List<Nested>>)
 
 @GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class)
 @GenerateMoshi
-data class WithDefaults(val name: String, val age: Int = 3)
+data class WithDefaults(@Json(name = "nom") val name: String, val age: Int = 3)

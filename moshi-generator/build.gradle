@@ -44,7 +44,7 @@ def pomConfig = {
 }
 
 task sourceJar(type: Jar) {
-    from sourceSets.main.allJava
+    from sourceSets.main.allSource
 }
 
 task packageJavadoc(type: Jar, dependsOn: 'javadoc') {
@@ -73,7 +73,7 @@ publishing {
     publications {
         MyPublication(MavenPublication) {
             groupId "$ARTIFACT_PACKAGE"
-            version "$ARTIFACT_VERSION-18"
+            version "$ARTIFACT_VERSION"
             artifactId "$ARTIFACT_NAME"
             from components.java
 

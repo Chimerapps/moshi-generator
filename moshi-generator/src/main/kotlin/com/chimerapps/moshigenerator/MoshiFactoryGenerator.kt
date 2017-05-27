@@ -26,6 +26,7 @@ class MoshiFactoryGenerator(val className: String,
         adapters.forEach {
             factoryClassBuilder.addOriginatingElement(elementUtils.getTypeElement(it.toString()))
         }
+        factoryClassBuilder.addJavadoc("Generated using moshi-generator")
 
         JavaFile.builder(packageName, factoryClassBuilder.build()).indent("\t").build().writeTo(filer)
     }
