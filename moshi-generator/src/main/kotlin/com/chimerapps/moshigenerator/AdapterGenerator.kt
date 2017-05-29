@@ -74,7 +74,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
                 .returns(TypeName.VOID)
                 .addParameter(ParameterSpec.builder(JsonWriter::class.java, "writer", Modifier.FINAL).build())
                 .addParameter(ParameterSpec.builder(ClassName.get(clazz.element), "value", Modifier.FINAL).build())
-                .addCode(CodeBlock.builder().addStatement("moshi.nextAdapter(factory, type, annotations).toJson(writer, value)").build())
+                .addCode(createWriterBlock())
                 .build()
     }
 
@@ -138,6 +138,25 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         return builder.build()
     }
 
+    private fun createWriterBlock(): CodeBlock {
+        val builder = CodeBlock.builder()
+
+        if (clazz.generatesWriter()) {
+            builder.addStatement("writer.beginObject()")
+
+            val fields = clazz.fields
+            for (variableElement in fields) {
+                builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
+                generateWriter(builder, variableElement)
+            }
+
+            builder.addStatement("writer.endObject()");
+        } else {
+            builder.addStatement("moshi.nextAdapter(factory, type, annotations).toJson(writer, value)")
+        }
+        return builder.build()
+    }
+
     private fun generateNullChecks(builder: CodeBlock.Builder, fields: List<VariableElement>) {
         for (field in fields) {
             if (!isNullable(field)) { //No annotation -> required
@@ -149,29 +168,26 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     }
 
     private fun generateReader(builder: CodeBlock.Builder, variableElement: VariableElement) {
-        val mirror = variableElement.asType()
-
-        val typeName = TypeName.get(mirror)
+        val typeName = TypeName.get(variableElement.asType())
         if (typeName.isPrimitive || typeName.isBoxedPrimitive) {
-            generatePrimitive(builder, typeName, variableElement)
+            generatePrimitiveReader(builder, typeName, variableElement)
         } else if (typeName == ClassName.get(String::class.java)) {
             builder.addStatement("\$N = reader.nextString()", variableElement.simpleName.toString())
         } else {
-            generateDelegated(builder, typeName, variableElement)
+            generateDelegatedReader(builder, typeName, variableElement)
         }
     }
 
-    private fun generateDelegated(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
-        val subBuilder = CodeBlock.builder()
-        subBuilder.beginControlFlow("")
-
-        subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
-        subBuilder.addStatement("\$N = _adapter.fromJson(reader)", variableElement.simpleName.toString())
-        subBuilder.endControlFlow()
-        builder.add(subBuilder.build())
+    private fun generateWriter(builder: CodeBlock.Builder, variableElement: VariableElement) {
+        val typeName = TypeName.get(variableElement.asType())
+        if (typeName.isPrimitive || typeName.isBoxedPrimitive || typeName == ClassName.get(String::class.java)) {
+            generatePrimitiveWriter(builder, variableElement)
+        } else {
+            generateDelegatedWriter(builder, typeName, variableElement)
+        }
     }
 
-    private fun generatePrimitive(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
+    private fun generatePrimitiveReader(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
         val primitive = typeName.unbox()
 
         var method: String? = null
@@ -196,6 +212,28 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         if (method != null) {
             builder.addStatement("\$N = reader.\$N()", variableElement.simpleName.toString(), method)
         }
+    }
+
+    private fun generatePrimitiveWriter(builder: CodeBlock.Builder, variableElement: VariableElement) {
+        builder.addStatement("writer.value(value.${valueAccessor(variableElement)})")
+    }
+
+    private fun generateDelegatedReader(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
+        val subBuilder = CodeBlock.builder()
+        subBuilder.beginControlFlow("")
+        subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
+        subBuilder.addStatement("\$N = _adapter.fromJson(reader)", variableElement.simpleName.toString())
+        subBuilder.endControlFlow()
+        builder.add(subBuilder.build())
+    }
+
+    private fun generateDelegatedWriter(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
+        val subBuilder = CodeBlock.builder()
+        subBuilder.beginControlFlow("")
+        subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
+        subBuilder.addStatement("_adapter.toJson(writer, value.${valueAccessor(variableElement)})")
+        subBuilder.endControlFlow()
+        builder.add(subBuilder.build())
     }
 
     private fun makeType(typeName: TypeName): String {
@@ -234,6 +272,14 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     private fun getJsonFieldName(variableElement: VariableElement): String {
         val annotation = variableElement.getAnnotation(Json::class.java) ?: return variableElement.simpleName.toString()
         return annotation.name
+    }
+
+    private fun valueAccessor(variableElement: VariableElement): String {
+        val name = variableElement.simpleName.toString()
+        if (clazz.hasVisibleField(name)) {
+            return name
+        }
+        return "get${name.capitalize()}()"
     }
 
     companion object {

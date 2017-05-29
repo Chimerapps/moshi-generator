@@ -25,9 +25,9 @@ import com.squareup.moshi.Json
  * @date 26/05/2017.
  */
 @GenerateMoshi
-data class Simple(val name: String, val age: Int, val registered: Boolean)
+data class Simple(val name: String, val age: Int, val registered: Boolean, val complex_name: Long)
 
-@GenerateMoshi
+@GenerateMoshi(generateWriter = false)
 data class Nested(val person: Simple)
 
 @GenerateMoshi

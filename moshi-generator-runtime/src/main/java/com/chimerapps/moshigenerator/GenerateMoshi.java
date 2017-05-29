@@ -39,4 +39,12 @@ public @interface GenerateMoshi {
 	 */
 	boolean generateFactory() default false;
 
+	/**
+	 * Flag indicating if json writer code should be generated. When false, the adapter will delegate writing json
+	 * to the "next adapter". When generating the writer, the system will try direct field access OR a javabean style
+	 * getter (getField_Name)
+	 *
+	 * @return True if you wish to generate json writer code in the adapter, false to have the adapter delegate
+	 */
+	boolean generateWriter() default true;
 }

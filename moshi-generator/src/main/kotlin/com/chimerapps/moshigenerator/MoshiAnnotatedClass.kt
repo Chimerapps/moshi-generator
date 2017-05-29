@@ -97,4 +97,21 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateFactory
     }
 
+    fun hasVisibleField(name: String): Boolean {
+        return element.enclosedElements.find {
+            var found = false
+            if (it.kind == ElementKind.FIELD) {
+                it as VariableElement
+                if (it.simpleName.toString() == name) {
+                    found = !it.modifiers.contains(Modifier.PRIVATE)
+                }
+            }
+            found
+        } != null
+    }
+
+    fun generatesWriter(): Boolean {
+        return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateWriter
+    }
+
 }
