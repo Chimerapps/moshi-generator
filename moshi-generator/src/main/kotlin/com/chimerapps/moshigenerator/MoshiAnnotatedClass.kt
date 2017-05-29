@@ -97,17 +97,18 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateFactory
     }
 
+    fun isIncludedInToJson(name: String): Boolean {
+        return getFieldByName(name)?.modifiers?.contains(Modifier.TRANSIENT) == false
+    }
+
     fun hasVisibleField(name: String): Boolean {
+        return getFieldByName(name)?.modifiers?.contains(Modifier.PRIVATE) == false
+    }
+
+    fun getFieldByName(name: String): VariableElement? {
         return element.enclosedElements.find {
-            var found = false
-            if (it.kind == ElementKind.FIELD) {
-                it as VariableElement
-                if (it.simpleName.toString() == name) {
-                    found = !it.modifiers.contains(Modifier.PRIVATE)
-                }
-            }
-            found
-        } != null
+            it.kind == ElementKind.FIELD && (it as VariableElement).simpleName.toString() == name
+        } as VariableElement?
     }
 
     fun generatesWriter(): Boolean {

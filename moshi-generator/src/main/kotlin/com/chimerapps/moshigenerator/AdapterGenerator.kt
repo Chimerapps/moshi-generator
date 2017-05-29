@@ -146,8 +146,10 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
             val fields = clazz.fields
             for (variableElement in fields) {
-                builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
-                generateWriter(builder, variableElement)
+                if (clazz.isIncludedInToJson(variableElement.simpleName.toString())) {
+                    builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
+                    generateWriter(builder, variableElement)
+                }
             }
 
             builder.addStatement("writer.endObject()");
