@@ -35,4 +35,4 @@ data class Generics(val persons: Map<String, List<Nested>>)
 
 @GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class)
 @GenerateMoshi
-data class WithDefaults(@Json(name = "nom") val name: String, @Transient val age: Int = 3)
+data class WithDefaults(@Json(name = "nom") val name: String, @Transient val age: Int = 3, val aBool: Boolean = false)

@@ -18,6 +18,7 @@ package com.chimerapps.moshigenerator
 
 import java.util.*
 import javax.lang.model.element.*
+import javax.lang.model.type.TypeMirror
 import javax.lang.model.util.Elements
 import javax.lang.model.util.Types
 
@@ -113,6 +114,12 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
 
     fun generatesWriter(): Boolean {
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateWriter
+    }
+
+    fun hasGetter(name: String, returnType: TypeMirror): Boolean {
+        return element.enclosedElements.find {
+            it.kind == ElementKind.METHOD && (it as ExecutableElement).simpleName.toString() == name && it.parameters.isEmpty() && typeUtil.isSameType(it.returnType, returnType)
+        } != null
     }
 
 }

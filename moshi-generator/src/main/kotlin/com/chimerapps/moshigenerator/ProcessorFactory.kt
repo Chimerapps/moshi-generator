@@ -77,7 +77,7 @@ class ProcessorFactory : AbstractProcessor() {
             classes.add(clazz)
             messager.printMessage(Diagnostic.Kind.NOTE, "Processing class: ${clazz.element.qualifiedName}")
 
-            AdapterGenerator(clazz, filer, elementUtils).generate()
+            AdapterGenerator(clazz, filer, elementUtils, logger).generate()
         }
         return classes
     }

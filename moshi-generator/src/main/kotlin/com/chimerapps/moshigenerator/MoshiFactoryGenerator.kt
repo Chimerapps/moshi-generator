@@ -46,7 +46,10 @@ class MoshiFactoryGenerator(val className: String,
     private fun createFactoryBlock(): CodeBlock {
         val builder = CodeBlock.builder()
 
-        builder.beginControlFlow("switch (type.getTypeName())")
+        builder.beginControlFlow("if (!(type instanceof \$T))",TypeName.get(Class::class.java))
+        builder.addStatement("return null")
+        builder.endControlFlow()
+        builder.beginControlFlow("switch (((Class)type).getName())")
         adapters.forEach {
             builder.addStatement("case \$S: return new \$T(moshi, this, type, annotations)", it.toString(), ClassName.bestGuess(it.toString() + "Adapter"))
         }

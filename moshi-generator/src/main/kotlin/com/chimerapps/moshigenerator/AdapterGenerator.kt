@@ -30,7 +30,7 @@ import javax.lang.model.util.Elements
  * *         Date 23/05/2017.
  */
 @SuppressWarnings("WeakerAccess")
-class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer: Filer, val elementUtils: Elements) {
+class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer: Filer, private val elementUtils: Elements, private val logger: SimpleLogger) {
 
     @Throws(AnnotationError::class, IOException::class)
     fun generate() {
@@ -91,6 +91,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
     private fun createConstructor(): MethodSpec {
         return MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
                 .addParameter(com.squareup.moshi.Moshi::class.java, "moshi", Modifier.FINAL)
                 .addParameter(JsonAdapter.Factory::class.java, "factory", Modifier.FINAL)
                 .addParameter(Type::class.java, "type", Modifier.FINAL)
@@ -280,6 +281,14 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val name = variableElement.simpleName.toString()
         if (clazz.hasVisibleField(name)) {
             return name
+        }
+        val type = TypeName.get(variableElement.asType())
+        if (type == TypeName.BOOLEAN || (type.isBoxedPrimitive && type.unbox() == TypeName.BOOLEAN)) {
+            val getterName = "is${name.capitalize()}"
+            logger.logDebug("Checking if class has getter method with name: $getterName")
+            if (clazz.hasGetter(getterName, variableElement.asType())) {
+                return "$getterName()"
+            }
         }
         return "get${name.capitalize()}()"
     }
