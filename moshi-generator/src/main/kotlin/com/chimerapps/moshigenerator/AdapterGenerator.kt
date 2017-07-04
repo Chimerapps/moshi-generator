@@ -284,7 +284,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         }
         val type = TypeName.get(variableElement.asType())
         if (type == TypeName.BOOLEAN || (type.isBoxedPrimitive && type.unbox() == TypeName.BOOLEAN)) {
-            val getterName = "is${name.capitalize()}"
+            val getterName = if (name.startsWith("is")) name else "is${name.capitalize()}"
             logger.logDebug("Checking if class has getter method with name: $getterName")
             if (clazz.hasGetter(getterName, variableElement.asType())) {
                 return "$getterName()"
