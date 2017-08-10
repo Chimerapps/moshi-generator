@@ -175,7 +175,10 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         if (typeName.isPrimitive || typeName.isBoxedPrimitive) {
             generatePrimitiveReader(builder, typeName, variableElement)
         } else if (typeName == ClassName.get(String::class.java)) {
-            builder.addStatement("\$N = reader.nextString()", variableElement.simpleName.toString())
+            if (isNullable(variableElement))
+                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : reader.nextString()", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box())
+            else
+                builder.addStatement("\$N = reader.nextString()", variableElement.simpleName.toString())
         } else {
             generateDelegatedReader(builder, typeName, variableElement)
         }
@@ -213,7 +216,10 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         }
 
         if (method != null) {
-            builder.addStatement("\$N = reader.\$N()", variableElement.simpleName.toString(), method)
+            if (isNullable(variableElement))
+                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : reader.\$N()", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box(), method)
+            else
+                builder.addStatement("\$N = reader.\$N()", variableElement.simpleName.toString(), method)
         }
     }
 
