@@ -71,18 +71,19 @@ class MoshiFactoryGenerator(val className: String,
         }
         builder.addStatement("return null")
         builder.endControlFlow()
-        builder.beginControlFlow("switch (((Class)type).getName())")
-        adapters.forEach {
-            val statementBuilder: CodeBlock.Builder
-            if (log) {
-                statementBuilder = CodeBlock.builder()
-                        .addStatement("LOGGER.log(\$T.FINE, \"Creating adapter for ?!\")", ClassName.get(Level::class.java))
-            } else {
-                statementBuilder = builder
-            }
-            statementBuilder.addStatement("case \$S: return new \$T(moshi, this, type, annotations)", it.toString(), ClassName.bestGuess(it.toString() + "Adapter"))
+        if (log) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"Using class name for lookup: {0}\", ((Class)type).getName())", ClassName.get(Level::class.java))
         }
-        builder.endControlFlow()
+        builder.addStatement("final String _className = (((Class)type).getName())")
+        adapters.forEach { adapter ->
+            builder.beginControlFlow("if (_className.equals(\$S))", adapter.toString())
+            if (log) {
+                builder.addStatement("LOGGER.log(\$T.FINE, \"Creating adapter for ${adapter.toString()}!\")", ClassName.get(Level::class.java))
+            }
+            builder.addStatement("return new \$T(moshi, this, type, annotations)", ClassName.bestGuess(adapter.toString() + "Adapter"))
+            builder.endControlFlow()
+        }
+
         builder.addStatement("return null")
         return builder.build()
     }
