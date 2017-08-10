@@ -20,6 +20,8 @@ import com.squareup.javapoet.*
 import com.squareup.moshi.*
 import java.io.IOException
 import java.lang.reflect.Type
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.annotation.processing.Filer
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.VariableElement
@@ -32,6 +34,8 @@ import javax.lang.model.util.Elements
 @SuppressWarnings("WeakerAccess")
 class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer: Filer, private val elementUtils: Elements, private val logger: SimpleLogger) {
 
+    private val logging = clazz.debugLogs()
+
     @Throws(AnnotationError::class, IOException::class)
     fun generate() {
         val from = createFromJson()
@@ -43,6 +47,17 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         adapterClassBuilder.addModifiers(Modifier.PUBLIC)
         adapterClassBuilder.addOriginatingElement(clazz.element)
         adapterClassBuilder.addJavadoc("Generated using moshi-generator")
+
+        if (logging) {
+            adapterClassBuilder.addField(
+                    FieldSpec.builder(Logger::class.java, "LOGGER",
+                            Modifier.FINAL,
+                            Modifier.PRIVATE,
+                            Modifier.STATIC)
+                            .initializer("\$T.getLogger(\$S)",
+                                    ClassName.get(Logger::class.java),
+                                    "${clazz.packageName}.${clazz.element.simpleName}Adapter").build())
+        }
 
         adapterClassBuilder.addField(FieldSpec.builder(Moshi::class.java, "moshi", Modifier.PRIVATE, Modifier.FINAL).build())
         adapterClassBuilder.addField(FieldSpec.builder(JsonAdapter.Factory::class.java, "factory", Modifier.PRIVATE, Modifier.FINAL).build())
@@ -57,7 +72,8 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
                     clazz.packageName,
                     listOf(ClassName.bestGuess("${clazz.packageName}.${clazz.element.simpleName}")),
                     filer,
-                    elementUtils)
+                    elementUtils,
+                    logging)
                     .generate()
         }
 
@@ -90,21 +106,30 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     }
 
     private fun createConstructor(): MethodSpec {
-        return MethodSpec.constructorBuilder()
+        val builder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(com.squareup.moshi.Moshi::class.java, "moshi", Modifier.FINAL)
                 .addParameter(JsonAdapter.Factory::class.java, "factory", Modifier.FINAL)
                 .addParameter(Type::class.java, "type", Modifier.FINAL)
                 .addParameter(ParameterizedTypeName.get(ClassName.get(Set::class.java), WildcardTypeName.subtypeOf(Annotation::class.java)), "annotations", Modifier.FINAL)
-                .addStatement("this.moshi = moshi")
+
+        if (logging) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"Constructing \$N\")", ClassName.get(Level::class.java), "${clazz.element.simpleName}Adapter")
+        }
+
+        builder.addStatement("this.moshi = moshi")
                 .addStatement("this.factory = factory")
                 .addStatement("this.type = type")
                 .addStatement("this.annotations = annotations")
-                .build()
+        return builder.build()
     }
 
     private fun createReaderBlock(): CodeBlock {
         val builder = CodeBlock.builder()
+
+        if (logging) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"Reading json\")", ClassName.get(Level::class.java))
+        }
 
         val fields = clazz.fields
         for (variableElement in fields) {
@@ -113,6 +138,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         builder.addStatement("reader.beginObject()")
         builder.beginControlFlow("while (reader.hasNext())")
         builder.addStatement("final \$T _name = reader.nextName()", ClassName.get(String::class.java))
+        if (logging) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"\tGot name: {0}\", _name)", ClassName.get(Level::class.java))
+        }
         builder.beginControlFlow("switch (_name)")
         for (variableElement in fields) {
             builder.add("case \$S: ", getJsonFieldName(variableElement))
@@ -231,7 +259,13 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val subBuilder = CodeBlock.builder()
         subBuilder.beginControlFlow("")
         subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
+        if (logging) {
+            subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot delegate adapter: {0}\", _adapter)", ClassName.get(Level::class.java))
+        }
         subBuilder.addStatement("\$N = _adapter.fromJson(reader)", variableElement.simpleName.toString())
+        if (logging) {
+            subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot model data: {0}\", \$N)", ClassName.get(Level::class.java), variableElement.simpleName.toString())
+        }
         subBuilder.endControlFlow()
         builder.add(subBuilder.build())
     }
@@ -240,6 +274,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val subBuilder = CodeBlock.builder()
         subBuilder.beginControlFlow("")
         subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
+        if (logging) {
+            subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot delegate adapter: {0}\", _adapter)", ClassName.get(Level::class.java))
+        }
         subBuilder.addStatement("_adapter.toJson(writer, value.${valueAccessor(variableElement)})")
         subBuilder.endControlFlow()
         builder.add(subBuilder.build())

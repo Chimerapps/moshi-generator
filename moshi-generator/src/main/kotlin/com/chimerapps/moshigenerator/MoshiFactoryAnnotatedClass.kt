@@ -35,6 +35,10 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
         makePackage(_targetPackage)
     }
 
+    fun debugLogs(): Boolean {
+        return element.getAnnotation<GenerateMoshiFactory>(GenerateMoshiFactory::class.java).debugLogs
+    }
+
     private fun findPackageOfElement(element: Element?): String {
         if (element == null)
             return ""

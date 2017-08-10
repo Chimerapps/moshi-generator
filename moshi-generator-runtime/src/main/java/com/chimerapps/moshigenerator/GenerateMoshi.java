@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * taking all the fields of that class. No fields will be set outside of this constructor
  *
  * @author Nicola Verbeeck
- *         Date 23/05/2017.
+ * Date 23/05/2017.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
@@ -47,4 +47,12 @@ public @interface GenerateMoshi {
 	 * @return True if you wish to generate json writer code in the adapter, false to have the adapter delegate
 	 */
 	boolean generateWriter() default true;
+
+	/**
+	 * Flag indicating if the generator should insert debug logs into the generated adapter. Useful for debugging when
+	 * you cannot attach a debugger
+	 *
+	 * @return True if the generate should generate log statements for this adapter
+	 */
+	boolean debugLogs() default false;
 }

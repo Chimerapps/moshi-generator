@@ -24,15 +24,15 @@ import com.squareup.moshi.Json
  * @author Nicola Verbeeck
  * @date 26/05/2017.
  */
-@GenerateMoshi
+@GenerateMoshi(debugLogs = true)
 data class Simple(val name: String?, val age: Int, val isRegistered: Boolean?, val complex_name: Long)
 
-@GenerateMoshi(generateWriter = false)
+@GenerateMoshi(generateWriter = false, debugLogs = true)
 data class Nested(val person: Simple)
 
-@GenerateMoshi
+@GenerateMoshi(debugLogs = true)
 data class Generics(val persons: Map<String, List<Nested>>)
 
-@GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class)
-@GenerateMoshi
+@GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class, debugLogs = true)
+@GenerateMoshi(debugLogs = true)
 data class WithDefaults(@Json(name = "nom") val name: String, @Transient val age: Int = 3, val aBool: Boolean = false)

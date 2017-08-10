@@ -116,6 +116,10 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateWriter
     }
 
+    fun debugLogs(): Boolean {
+        return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).debugLogs
+    }
+
     fun hasGetter(name: String, returnType: TypeMirror): Boolean {
         return element.enclosedElements.find {
             it.kind == ElementKind.METHOD && (it as ExecutableElement).simpleName.toString() == name && it.parameters.isEmpty() && typeUtil.isSameType(it.returnType, returnType)

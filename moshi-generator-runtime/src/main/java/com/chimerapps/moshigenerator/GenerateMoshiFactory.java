@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  * set to false (the default), will be included in this "mega" factory.
  *
  * @author Nicola Verbeeck
- *         Date 26/05/2017.
+ * Date 26/05/2017.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
@@ -53,4 +53,11 @@ public @interface GenerateMoshiFactory {
 	 */
 	String targetPackage() default "";
 
+	/**
+	 * Flag indicating if the generator should insert debug logs into the generated factory. Useful for debugging when
+	 * you cannot attach a debugger
+	 *
+	 * @return True if the generate should generate log statements for this factory
+	 */
+	boolean debugLogs() default false;
 }

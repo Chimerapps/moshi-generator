@@ -3,6 +3,8 @@ package com.chimerapps.moshigenerator
 import com.squareup.javapoet.*
 import com.squareup.moshi.JsonAdapter
 import java.lang.reflect.Type
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.annotation.processing.Filer
 import javax.lang.model.element.Modifier
 import javax.lang.model.util.Elements
@@ -11,17 +13,30 @@ import javax.lang.model.util.Elements
  * @author Nicola Verbeeck
  * @date 26/05/2017.
  */
+//TODO log too
 class MoshiFactoryGenerator(val className: String,
                             val packageName: String,
                             val adapters: List<TypeName>,
                             val filer: Filer,
-                            val elementUtils: Elements) {
+                            val elementUtils: Elements,
+                            val log: Boolean) {
 
     fun generate() {
         val factoryClassBuilder = TypeSpec.classBuilder(className)
         factoryClassBuilder.addSuperinterface(JsonAdapter.Factory::class.java)
         factoryClassBuilder.addModifiers(Modifier.PUBLIC)
         factoryClassBuilder.addMethod(generateFactoryMethod())
+
+        if (log) {
+            factoryClassBuilder.addField(
+                    FieldSpec.builder(Logger::class.java, "LOGGER",
+                            Modifier.FINAL,
+                            Modifier.PRIVATE,
+                            Modifier.STATIC)
+                            .initializer("\$T.getLogger(\$S)",
+                                    ClassName.get(Logger::class.java),
+                                    "$packageName.$className").build())
+        }
 
         adapters.forEach {
             factoryClassBuilder.addOriginatingElement(elementUtils.getTypeElement(it.toString()))
@@ -46,12 +61,26 @@ class MoshiFactoryGenerator(val className: String,
     private fun createFactoryBlock(): CodeBlock {
         val builder = CodeBlock.builder()
 
-        builder.beginControlFlow("if (!(type instanceof \$T))",TypeName.get(Class::class.java))
+        if (log) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"Checking if we have an adapter for type: {0}\", type)", ClassName.get(Level::class.java))
+        }
+
+        builder.beginControlFlow("if (!(type instanceof \$T))", TypeName.get(Class::class.java))
+        if (log) {
+            builder.addStatement("LOGGER.log(\$T.FINE, \"Not a class?!\")", ClassName.get(Level::class.java))
+        }
         builder.addStatement("return null")
         builder.endControlFlow()
         builder.beginControlFlow("switch (((Class)type).getName())")
         adapters.forEach {
-            builder.addStatement("case \$S: return new \$T(moshi, this, type, annotations)", it.toString(), ClassName.bestGuess(it.toString() + "Adapter"))
+            val statementBuilder: CodeBlock.Builder
+            if (log) {
+                statementBuilder = CodeBlock.builder()
+                        .addStatement("LOGGER.log(\$T.FINE, \"Creating adapter for ?!\")", ClassName.get(Level::class.java))
+            } else {
+                statementBuilder = builder
+            }
+            statementBuilder.addStatement("case \$S: return new \$T(moshi, this, type, annotations)", it.toString(), ClassName.bestGuess(it.toString() + "Adapter"))
         }
         builder.endControlFlow()
         builder.addStatement("return null")

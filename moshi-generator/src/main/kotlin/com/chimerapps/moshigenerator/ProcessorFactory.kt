@@ -88,7 +88,7 @@ class ProcessorFactory : AbstractProcessor() {
         for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshiFactory::class.java)) {
             val clazz = MoshiFactoryAnnotatedClass(element, logger)
 
-            MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils).generate()
+            MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils, clazz.debugLogs()).generate()
 
             clazz.moshiClasses.forEach {
                 if (knownClasses.contains(it.toString())) {
