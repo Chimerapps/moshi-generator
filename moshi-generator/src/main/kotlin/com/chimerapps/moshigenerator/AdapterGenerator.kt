@@ -171,6 +171,10 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val builder = CodeBlock.builder()
 
         if (clazz.generatesWriter()) {
+            builder.beginControlFlow("if (value == null)")
+                    .addStatement("writer.nullValue()")
+                    .addStatement("return")
+                    .endControlFlow()
             builder.addStatement("writer.beginObject()")
 
             val fields = clazz.fields
