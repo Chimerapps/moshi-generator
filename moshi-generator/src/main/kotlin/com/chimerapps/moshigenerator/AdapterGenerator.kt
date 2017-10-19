@@ -177,12 +177,11 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
                     .endControlFlow()
             builder.addStatement("writer.beginObject()")
 
-            val fields = clazz.fields
+            val fields = clazz.writerFields
             for (variableElement in fields) {
-                if (clazz.isIncludedInToJson(variableElement.simpleName.toString())) {
-                    builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
-                    generateWriter(builder, variableElement)
-                }
+                logger.logDebug("Checking if field with name $variableElement needs a different name based on annotations: ${variableElement.annotationMirrors}")
+                builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
+                generateWriter(builder, variableElement)
             }
 
             builder.addStatement("writer.endObject()");
@@ -249,7 +248,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
         if (method != null) {
             if (isNullable(variableElement))
-                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : reader.\$N()", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box(), method)
+                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : \$T.valueOf(reader.\$N())", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box(), typeName.box(), method)
             else
                 builder.addStatement("\$N = reader.\$N()", variableElement.simpleName.toString(), method)
         }

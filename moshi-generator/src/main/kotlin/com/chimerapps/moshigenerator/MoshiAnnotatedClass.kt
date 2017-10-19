@@ -18,6 +18,7 @@ package com.chimerapps.moshigenerator
 
 import java.util.*
 import javax.lang.model.element.*
+import javax.lang.model.type.TypeKind
 import javax.lang.model.type.TypeMirror
 import javax.lang.model.util.Elements
 import javax.lang.model.util.Types
@@ -26,7 +27,10 @@ import javax.lang.model.util.Types
  * @author Nicola Verbeeck
  * *         Date 23/05/2017.
  */
-class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, val typeUtil: Types) {
+class MoshiAnnotatedClass(private val logger: SimpleLogger,
+                          val element: TypeElement,
+                          val elementUtil: Elements,
+                          val typeUtil: Types) {
 
     fun checkValid() {
         if (!element.modifiers.contains(Modifier.PUBLIC)) {
@@ -71,19 +75,54 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
                     continue
                 }
                 if (constructor != null) {
-                    throw AnnotationError("Class ${element.qualifiedName.toString()} must have only 1 constructor")
+                    throw AnnotationError("Class ${element.qualifiedName} must have only 1 constructor")
                 }
                 constructor = constructorElement
             }
         }
         if (constructor == null) {
-            throw AnnotationError("Class ${element.qualifiedName.toString()} must have a constructor")
+            throw AnnotationError("Class ${element.qualifiedName} must have a constructor")
         }
         if (constructor.parameters.isEmpty()) {
-            throw AnnotationError("Class ${element.qualifiedName.toString()} must have a non-empty constructor")
+            throw AnnotationError("Class ${element.qualifiedName} must have a non-empty constructor")
         }
 
         ArrayList<VariableElement>(constructor.parameters)
+    }
+
+    val writerFields: List<VariableElement> by lazy {
+        val elements = mutableListOf<VariableElement>()
+        var parent = element.asType()
+        logger.logDebug("Finding fields to write in self: $parent (${parent.kind})")
+        while (parent.kind == TypeKind.DECLARED) {
+            val element = typeUtil.asElement(parent) as TypeElement
+            if (element.qualifiedName.toString() == "java.lang.Object")
+                break;
+            logger.logDebug("$parent is class, finding fields")
+            for (childElement in element.enclosedElements) {
+                logger.logDebug("Checking element: $childElement")
+                if (childElement.kind == ElementKind.FIELD) {
+                    logger.logDebug("Element is field, check if we are allowed to add")
+                    val asVariable = childElement as VariableElement
+                    if (!childElement.modifiers.contains(Modifier.VOLATILE) && !childElement.modifiers.contains(Modifier.STATIC)) {
+                        if (childElement.modifiers.contains(Modifier.PUBLIC)
+                                || hasGetter("get${asVariable.simpleName.toString().capitalize()}", childElement.asType())
+                                || hasGetter("is${asVariable.simpleName.toString().capitalize()}", childElement.asType())
+                                || hasGetter(asVariable.simpleName.toString(), childElement.asType())) {
+                            logger.logDebug("Element is accessible, adding")
+                            elements.add(asVariable)
+                        } else {
+                            logger.logDebug("Element is not public or has no getter of the correct type (${childElement.modifiers})")
+                        }
+                    } else {
+                        logger.logDebug("Element is volatile or static")
+                    }
+                }
+            }
+            parent = element.superclass
+        }
+        logger.logDebug("Found fields to write: $elements")
+        elements
     }
 
     private fun isParcelConstructor(constructorElement: ExecutableElement): Boolean {
@@ -96,10 +135,6 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
 
     fun generatesFactory(): Boolean {
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateFactory
-    }
-
-    fun isIncludedInToJson(name: String): Boolean {
-        return getFieldByName(name)?.modifiers?.contains(Modifier.TRANSIENT) == false
     }
 
     fun hasVisibleField(name: String): Boolean {
@@ -121,9 +156,24 @@ class MoshiAnnotatedClass(val element: TypeElement, val elementUtil: Elements, v
     }
 
     fun hasGetter(name: String, returnType: TypeMirror): Boolean {
-        return element.enclosedElements.find {
-            it.kind == ElementKind.METHOD && (it as ExecutableElement).simpleName.toString() == name && it.parameters.isEmpty() && typeUtil.isSameType(it.returnType, returnType)
-        } != null
+        logger.logDebug("Finding method $name")
+
+        var checking = element.asType()
+        while (checking.kind == TypeKind.DECLARED) {
+            val el = typeUtil.asElement(checking) as TypeElement
+            if (el.qualifiedName.toString() == "java.lang.Object")
+                break;
+            if (el.enclosedElements.find {
+                it.kind == ElementKind.METHOD &&
+                        (it as ExecutableElement).simpleName.toString() == name && it.parameters.isEmpty() &&
+                        typeUtil.isSameType(it.returnType, returnType) &&
+                        (it.modifiers.contains(Modifier.PUBLIC))
+            } != null) {
+                return true
+            }
+            checking = el.superclass
+        }
+        return false
     }
 
 }

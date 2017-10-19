@@ -33,6 +33,12 @@ data class Nested(val person: Simple)
 @GenerateMoshi(debugLogs = true)
 data class Generics(val persons: Map<String, List<Nested>>)
 
-@GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class, debugLogs = true)
+@GenerateMoshiFactory(WithDefaults::class, Simple::class, Nested::class, Generics::class, ClassWithParent::class, SomeClass::class, debugLogs = true)
 @GenerateMoshi(debugLogs = true)
 data class WithDefaults(@Json(name = "nom") val name: String, @Transient val age: Int = 3, val aBool: Boolean = false)
+
+@GenerateMoshi(debugLogs = true)
+class ClassWithParent(title: String, val item: Long, @Json(name = "renamed") withOtherNameInHere: Boolean) : SomeClass(title, withOtherNameInHere)
+
+@GenerateMoshi(debugLogs = true)
+open class SomeClass(val title: String, @field:Json(name = "renamed") @Json(name = "renamed") val withOtherName: Boolean)

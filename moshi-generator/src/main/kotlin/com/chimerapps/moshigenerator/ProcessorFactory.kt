@@ -71,7 +71,7 @@ class ProcessorFactory : AbstractProcessor() {
             }
 
             val typeElement = element as TypeElement
-            val clazz = MoshiAnnotatedClass(typeElement, elementUtils, typeUtils)
+            val clazz = MoshiAnnotatedClass(logger, typeElement, elementUtils, typeUtils)
             clazz.checkValid()
 
             classes.add(clazz)
