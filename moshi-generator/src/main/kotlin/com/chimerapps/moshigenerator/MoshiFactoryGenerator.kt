@@ -74,15 +74,16 @@ class MoshiFactoryGenerator(val className: String,
         if (log) {
             builder.addStatement("LOGGER.log(\$T.FINE, \"Using class name for lookup: {0}\", ((Class)type).getName())", ClassName.get(Level::class.java))
         }
-        builder.addStatement("final String _className = (((Class)type).getName())")
-        adapters.forEach { adapter ->
-            builder.beginControlFlow("if (_className.equals(\$S))", adapter.toString())
+        builder.beginControlFlow("switch (((Class)type).getName())")
+        adapters.forEach {
+            builder.beginControlFlow("case \$S:", it.toString())
             if (log) {
-                builder.addStatement("LOGGER.log(\$T.FINE, \"Creating adapter for ${adapter.toString()}!\")", ClassName.get(Level::class.java))
+                builder.addStatement("LOGGER.log(\$T.FINE, \"Creating adapter for $it\")", ClassName.get(Level::class.java))
             }
-            builder.addStatement("return new \$T(moshi, this, type, annotations)", ClassName.bestGuess(adapter.toString() + "Adapter"))
+            builder.addStatement("return new \$T(moshi, this, type, annotations)", ClassName.bestGuess(it.toString() + "Adapter"))
             builder.endControlFlow()
         }
+        builder.endControlFlow()
 
         builder.addStatement("return null")
         return builder.build()
