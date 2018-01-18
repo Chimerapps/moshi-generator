@@ -43,7 +43,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val constructor = createConstructor()
 
         val adapterClassBuilder = TypeSpec.classBuilder(clazz.element.simpleName.toString() + "Adapter")
-        adapterClassBuilder.superclass(ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), ClassName.get(clazz.element)))
+        adapterClassBuilder.superclass(ParameterizedTypeName.get(ClassName.get(BaseGeneratedAdapter::class.java), ClassName.get(clazz.element)))
         adapterClassBuilder.addModifiers(Modifier.PUBLIC)
         adapterClassBuilder.addOriginatingElement(clazz.element)
         adapterClassBuilder.addJavadoc("Generated using moshi-generator")
@@ -59,21 +59,18 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
                                     "${clazz.packageName}.${clazz.element.simpleName}Adapter").build())
         }
 
-        adapterClassBuilder.addField(FieldSpec.builder(Moshi::class.java, "moshi", Modifier.PRIVATE, Modifier.FINAL).build())
-        adapterClassBuilder.addField(FieldSpec.builder(JsonAdapter.Factory::class.java, "factory", Modifier.PRIVATE, Modifier.FINAL).build())
-        adapterClassBuilder.addField(FieldSpec.builder(Type::class.java, "type", Modifier.PRIVATE, Modifier.FINAL).build())
-        adapterClassBuilder.addField(FieldSpec.builder(ParameterizedTypeName.get(ClassName.get(Set::class.java), WildcardTypeName.subtypeOf(Annotation::class.java)), "annotations", Modifier.PRIVATE, Modifier.FINAL).build())
+        adapterClassBuilder.addField(FieldSpec.builder(Moshi::class.java, "moshi", Modifier.PRIVATE).build())
         adapterClassBuilder.addMethod(constructor)
         adapterClassBuilder.addMethod(from)
         adapterClassBuilder.addMethod(to)
+        adapterClassBuilder.addMethod(generateSetMoshiMethod())
 
         if (clazz.generatesFactory()) {
             MoshiFactoryGenerator(clazz.element.simpleName.toString() + "AdapterFactory",
                     clazz.packageName,
                     listOf(ClassName.bestGuess("${clazz.packageName}.${clazz.element.simpleName}")),
                     filer,
-                    elementUtils,
-                    logging)
+                    elementUtils)
                     .generate()
         }
 
@@ -108,19 +105,13 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     private fun createConstructor(): MethodSpec {
         val builder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(com.squareup.moshi.Moshi::class.java, "moshi", Modifier.FINAL)
                 .addParameter(JsonAdapter.Factory::class.java, "factory", Modifier.FINAL)
                 .addParameter(Type::class.java, "type", Modifier.FINAL)
-                .addParameter(ParameterizedTypeName.get(ClassName.get(Set::class.java), WildcardTypeName.subtypeOf(Annotation::class.java)), "annotations", Modifier.FINAL)
+                .addStatement("super(factory,type)")
 
         if (logging) {
             builder.addStatement("LOGGER.log(\$T.FINE, \"Constructing \$N\")", ClassName.get(Level::class.java), "${clazz.element.simpleName}Adapter")
         }
-
-        builder.addStatement("this.moshi = moshi")
-                .addStatement("this.factory = factory")
-                .addStatement("this.type = type")
-                .addStatement("this.annotations = annotations")
         return builder.build()
     }
 
@@ -133,7 +124,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
         val fields = clazz.fields
         for (variableElement in fields) {
-            builder.addStatement("\$T \$N = null", TypeName.get(variableElement.asType()).box(), variableElement.simpleName.toString())
+            builder.addStatement("\$T __\$N = null", TypeName.get(variableElement.asType()).box(), variableElement.simpleName.toString())
         }
         builder.addStatement("reader.beginObject()")
         builder.beginControlFlow("while (reader.hasNext())")
@@ -160,7 +151,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
             if (index != 0) {
                 builder.add(", ")
             }
-            builder.add("\$N", variableElement.simpleName.toString())
+            builder.add("__\$N", variableElement.simpleName.toString())
         }
 
         builder.addStatement(")")
@@ -184,9 +175,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
                 generateWriter(builder, variableElement)
             }
 
-            builder.addStatement("writer.endObject()");
+            builder.addStatement("writer.endObject()")
         } else {
-            builder.addStatement("moshi.nextAdapter(factory, type, annotations).toJson(writer, value)")
+            builder.addStatement("moshi.nextAdapter(factory, type, EMPTY_ANNOTATIONS).toJson(writer, value)")
         }
         return builder.build()
     }
@@ -194,7 +185,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     private fun generateNullChecks(builder: CodeBlock.Builder, fields: List<VariableElement>) {
         for (field in fields) {
             if (!isNullable(field)) { //No annotation -> required
-                builder.beginControlFlow("if (\$N == null)", field.simpleName.toString())
+                builder.beginControlFlow("if (__\$N == null)", field.simpleName.toString())
                 builder.addStatement("throw new \$T(\$S)", ClassName.get(IOException::class.java), getJsonFieldName(field) + " is non-optional but was not found in the json")
                 builder.endControlFlow()
             }
@@ -207,9 +198,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
             generatePrimitiveReader(builder, typeName, variableElement)
         } else if (typeName == ClassName.get(String::class.java)) {
             if (isNullable(variableElement))
-                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : reader.nextString()", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box())
+                builder.addStatement("__\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : reader.nextString()", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box())
             else
-                builder.addStatement("\$N = reader.nextString()", variableElement.simpleName.toString())
+                builder.addStatement("__\$N = reader.nextString()", variableElement.simpleName.toString())
         } else {
             generateDelegatedReader(builder, typeName, variableElement)
         }
@@ -233,7 +224,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         } else if (primitive == TypeName.BYTE) {
             throw AnnotationError("Byte not supported")
         } else if (primitive == TypeName.SHORT) {
-            builder.addStatement("\$N = (short)reader.nextInt()", variableElement.simpleName.toString())
+            builder.addStatement("__\$N = (short)reader.nextInt()", variableElement.simpleName.toString())
         } else if (primitive == TypeName.INT) {
             method = "nextInt"
         } else if (primitive == TypeName.LONG) {
@@ -241,16 +232,16 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         } else if (primitive == TypeName.CHAR) {
             throw AnnotationError("Char not supported")
         } else if (primitive == TypeName.FLOAT) {
-            builder.addStatement("\$N = (float)reader.nextDouble()", variableElement.simpleName.toString())
+            builder.addStatement("__\$N = (float)reader.nextDouble()", variableElement.simpleName.toString())
         } else if (primitive == TypeName.DOUBLE) {
             method = "nextDouble"
         }
 
         if (method != null) {
             if (isNullable(variableElement))
-                builder.addStatement("\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : \$T.valueOf(reader.\$N())", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box(), typeName.box(), method)
+                builder.addStatement("__\$N = (reader.peek() == \$T.Token.NULL) ? reader.<\$T>nextNull() : \$T.valueOf(reader.\$N())", variableElement.simpleName.toString(), ClassName.get(JsonReader::class.java), typeName.box(), typeName.box(), method)
             else
-                builder.addStatement("\$N = reader.\$N()", variableElement.simpleName.toString(), method)
+                builder.addStatement("__\$N = reader.\$N()", variableElement.simpleName.toString(), method)
         }
     }
 
@@ -265,9 +256,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         if (logging) {
             subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot delegate adapter: {0}\", _adapter)", ClassName.get(Level::class.java))
         }
-        subBuilder.addStatement("\$N = _adapter.fromJson(reader)", variableElement.simpleName.toString())
+        subBuilder.addStatement("__\$N = _adapter.fromJson(reader)", variableElement.simpleName.toString())
         if (logging) {
-            subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot model data: {0}\", \$N)", ClassName.get(Level::class.java), variableElement.simpleName.toString())
+            subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot model data: {0}\", __\$N)", ClassName.get(Level::class.java), variableElement.simpleName.toString())
         }
         subBuilder.endControlFlow()
         builder.add(subBuilder.build())
@@ -337,6 +328,14 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
             }
         }
         return "get${name.capitalize()}()"
+    }
+
+    private fun generateSetMoshiMethod(): MethodSpec {
+        return MethodSpec.methodBuilder("setMoshi")
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                .addParameter(TypeName.get(Moshi::class.java), "moshi", Modifier.FINAL)
+                .addStatement("this.moshi = moshi")
+                .build()
     }
 
     companion object {

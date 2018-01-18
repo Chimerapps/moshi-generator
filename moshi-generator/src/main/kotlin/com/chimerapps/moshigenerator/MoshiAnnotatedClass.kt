@@ -93,35 +93,25 @@ class MoshiAnnotatedClass(private val logger: SimpleLogger,
     val writerFields: List<VariableElement> by lazy {
         val elements = mutableListOf<VariableElement>()
         var parent = element.asType()
-        logger.logDebug("Finding fields to write in self: $parent (${parent.kind})")
         while (parent.kind == TypeKind.DECLARED) {
             val element = typeUtil.asElement(parent) as TypeElement
             if (element.qualifiedName.toString() == "java.lang.Object")
                 break;
-            logger.logDebug("$parent is class, finding fields")
             for (childElement in element.enclosedElements) {
-                logger.logDebug("Checking element: $childElement")
                 if (childElement.kind == ElementKind.FIELD) {
-                    logger.logDebug("Element is field, check if we are allowed to add")
                     val asVariable = childElement as VariableElement
                     if (!childElement.modifiers.contains(Modifier.VOLATILE) && !childElement.modifiers.contains(Modifier.STATIC)) {
                         if (childElement.modifiers.contains(Modifier.PUBLIC)
                                 || hasGetter("get${asVariable.simpleName.toString().capitalize()}", childElement.asType())
                                 || hasGetter("is${asVariable.simpleName.toString().capitalize()}", childElement.asType())
                                 || hasGetter(asVariable.simpleName.toString(), childElement.asType())) {
-                            logger.logDebug("Element is accessible, adding")
                             elements.add(asVariable)
-                        } else {
-                            logger.logDebug("Element is not public or has no getter of the correct type (${childElement.modifiers})")
                         }
-                    } else {
-                        logger.logDebug("Element is volatile or static")
                     }
                 }
             }
             parent = element.superclass
         }
-        logger.logDebug("Found fields to write: $elements")
         elements
     }
 

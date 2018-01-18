@@ -35,10 +35,6 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
         makePackage(_targetPackage)
     }
 
-    fun debugLogs(): Boolean {
-        return element.getAnnotation<GenerateMoshiFactory>(GenerateMoshiFactory::class.java).debugLogs
-    }
-
     private fun findPackageOfElement(element: Element?): String {
         if (element == null)
             return ""
@@ -52,8 +48,6 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
 
     private fun buildAnnotationFromMirror(mirror: AnnotationMirror) {
         mirror.elementValues.forEach { executableElement, annotationValue ->
-            logger.logDebug("Got annotation value with name: ${executableElement.simpleName}")
-            logger.logDebug("Got annotation value with value: $annotationValue")
             when (executableElement.simpleName.toString()) {
                 "value" -> makeValue(annotationValue.value)
                 "targetClassName" -> className = annotationValue.value as String
@@ -71,12 +65,9 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
 
     @Suppress("UNCHECKED_CAST")
     private fun makeValue(value: Any) {
-        logger.logDebug("Extracting class names from $value")
         moshiClasses = (value as List<AnnotationValue>).map {
-            logger.logDebug("Got class name! ${ClassName.get((it.value as TypeMirror))}")
             ClassName.get((it.value as TypeMirror))
         }
-        logger.logDebug("# Classes loaded ${moshiClasses.size} from value")
     }
 
 

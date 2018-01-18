@@ -42,7 +42,7 @@ class ProcessorFactory : AbstractProcessor() {
             if (roundEnv.processingOver()) {
                 return true
             }
-            logger.logInfo("Starting processing round")
+            logger.logDebug("Starting processing round")
 
             try {
                 val classes = processDataClasses(roundEnv)
@@ -52,8 +52,7 @@ class ProcessorFactory : AbstractProcessor() {
                 messager.printMessage(Diagnostic.Kind.ERROR, annotationError.message ?: "<Unknown error> ${annotationError.javaClass.canonicalName}")
             }
 
-            logger.logInfo("Round processing complete")
-            messager.printMessage(Diagnostic.Kind.NOTE, "Processing complete")
+            logger.logDebug("Round processing complete")
         } catch(e: Exception) {
             messager.printMessage(Diagnostic.Kind.ERROR, "Failed to execute round: $e")
             logger.logError(e.message ?: "", e)
@@ -75,7 +74,7 @@ class ProcessorFactory : AbstractProcessor() {
             clazz.checkValid()
 
             classes.add(clazz)
-            messager.printMessage(Diagnostic.Kind.NOTE, "Processing class: ${clazz.element.qualifiedName}")
+            logger.logDebug("Processing class: ${clazz.element.qualifiedName}")
 
             AdapterGenerator(clazz, filer, elementUtils, logger).generate()
         }
@@ -88,7 +87,7 @@ class ProcessorFactory : AbstractProcessor() {
         for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshiFactory::class.java)) {
             val clazz = MoshiFactoryAnnotatedClass(element, logger)
 
-            MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils, clazz.debugLogs()).generate()
+            MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils).generate()
 
             clazz.moshiClasses.forEach {
                 if (knownClasses.contains(it.toString())) {
@@ -120,7 +119,7 @@ class ProcessorFactory : AbstractProcessor() {
         elementUtils = processingEnv.elementUtils
         typeUtils = processingEnv.typeUtils
         logger = SimpleLogger(messager)
-        logger.logInfo("Initialized processor")
+        logger.logDebug("Initialized processor")
     }
 
 }

@@ -2,7 +2,7 @@ group 'com.chimerapps'
 version '0.1.0'
 
 buildscript {
-    ext.kotlin_version = '1.2.10'
+    ext.kotlin_version = '1.2.20'
 
     repositories {
         mavenCentral()
@@ -21,9 +21,9 @@ repositories {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     compile 'com.squareup.moshi:moshi:1.5.0'
     compile project(':moshi-generator-runtime')
-    kapt 'com.chimerapps:moshi-generator:0.6.0'
+    kapt 'com.chimerapps:moshi-generator:0.8.0'
 }

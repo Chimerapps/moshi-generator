@@ -36,28 +36,21 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 public @interface GenerateMoshiFactory {
 
-	/**
-	 * The classes which are included in this factory
-	 *
-	 * @return The classes which are included in this factory
-	 */
-	Class<?>[] value();
+    /**
+     * The classes which are included in this factory
+     *
+     * @return The classes which are included in this factory
+     */
+    Class<?>[] value();
 
-	/**
-	 * @return The class name of the generated factory
-	 */
-	String targetClassName() default "MoshiFactory";
+    /**
+     * @return The class name of the generated factory
+     */
+    String targetClassName() default "MoshiFactory";
 
-	/**
-	 * @return The package name of the generated factory. Defaults to the package of the type this annotation is on
-	 */
-	String targetPackage() default "";
+    /**
+     * @return The package name of the generated factory. Defaults to the package of the type this annotation is on
+     */
+    String targetPackage() default "";
 
-	/**
-	 * Flag indicating if the generator should insert debug logs into the generated factory. Useful for debugging when
-	 * you cannot attach a debugger
-	 *
-	 * @return True if the generate should generate log statements for this factory
-	 */
-	boolean debugLogs() default false;
 }
