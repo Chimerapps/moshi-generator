@@ -20,10 +20,8 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
     init {
         val name = GenerateMoshiFactory::class.java.name
         element.annotationMirrors.forEach { mirror ->
-            logger.logDebug("Examining annotation: ${mirror.annotationType}")
             if (name == mirror.annotationType.toString()) {
-                logger.logDebug("Found correct one, init from here")
-                buildAnnotationFromMirror(mirror);
+                buildAnnotationFromMirror(mirror)
                 return@forEach
             }
         }

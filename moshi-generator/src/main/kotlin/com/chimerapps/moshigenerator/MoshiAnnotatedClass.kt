@@ -146,8 +146,6 @@ class MoshiAnnotatedClass(private val logger: SimpleLogger,
     }
 
     fun hasGetter(name: String, returnType: TypeMirror): Boolean {
-        logger.logDebug("Finding method $name")
-
         var checking = element.asType()
         while (checking.kind == TypeKind.DECLARED) {
             val el = typeUtil.asElement(checking) as TypeElement

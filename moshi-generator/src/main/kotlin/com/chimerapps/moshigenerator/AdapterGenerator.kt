@@ -170,7 +170,6 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
             val fields = clazz.writerFields
             for (variableElement in fields) {
-                logger.logDebug("Checking if field with name $variableElement needs a different name based on annotations: ${variableElement.annotationMirrors}")
                 builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
                 generateWriter(builder, variableElement)
             }
@@ -322,7 +321,6 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val type = TypeName.get(variableElement.asType())
         if (type == TypeName.BOOLEAN || (type.isBoxedPrimitive && type.unbox() == TypeName.BOOLEAN)) {
             val getterName = if (name.startsWith("is")) name else "is${name.capitalize()}"
-            logger.logDebug("Checking if class has getter method with name: $getterName")
             if (clazz.hasGetter(getterName, variableElement.asType())) {
                 return "$getterName()"
             }

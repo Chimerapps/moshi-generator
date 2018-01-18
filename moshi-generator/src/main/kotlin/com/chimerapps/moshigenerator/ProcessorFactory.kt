@@ -42,7 +42,6 @@ class ProcessorFactory : AbstractProcessor() {
             if (roundEnv.processingOver()) {
                 return true
             }
-            logger.logDebug("Starting processing round")
 
             try {
                 val classes = processDataClasses(roundEnv)
@@ -52,7 +51,6 @@ class ProcessorFactory : AbstractProcessor() {
                 messager.printMessage(Diagnostic.Kind.ERROR, annotationError.message ?: "<Unknown error> ${annotationError.javaClass.canonicalName}")
             }
 
-            logger.logDebug("Round processing complete")
         } catch(e: Exception) {
             messager.printMessage(Diagnostic.Kind.ERROR, "Failed to execute round: $e")
             logger.logError(e.message ?: "", e)
@@ -74,7 +72,6 @@ class ProcessorFactory : AbstractProcessor() {
             clazz.checkValid()
 
             classes.add(clazz)
-            logger.logDebug("Processing class: ${clazz.element.qualifiedName}")
 
             AdapterGenerator(clazz, filer, elementUtils, logger).generate()
         }
@@ -119,7 +116,6 @@ class ProcessorFactory : AbstractProcessor() {
         elementUtils = processingEnv.elementUtils
         typeUtils = processingEnv.typeUtils
         logger = SimpleLogger(messager)
-        logger.logDebug("Initialized processor")
     }
 
 }

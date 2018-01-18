@@ -11,10 +11,6 @@ import javax.tools.Diagnostic
  */
 class SimpleLogger(val messager: Messager) {
 
-    fun logDebug(message: String, error: Throwable? = null) {
-        messager.printMessage(Diagnostic.Kind.OTHER, makeMessage(message, error))
-    }
-
     fun logInfo(message: String, error: Throwable? = null) {
         messager.printMessage(Diagnostic.Kind.NOTE, makeMessage(message, error))
     }
