@@ -55,7 +55,7 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
     }
 
     private fun makePackage(annotationValue: String): String {
-        return if (annotationValue.isNullOrBlank())
+        return if (annotationValue.isBlank())
             findPackageOfElement(element)
         else
             annotationValue.trim()
@@ -64,6 +64,8 @@ class MoshiFactoryAnnotatedClass(val element: Element, val logger: SimpleLogger)
     @Suppress("UNCHECKED_CAST")
     private fun makeValue(value: Any) {
         moshiClasses = (value as List<AnnotationValue>).map {
+            if (it.value !is TypeMirror)
+                logger.logError("Failed to process all items in factory, are all classes resolved? ($it)")
             ClassName.get((it.value as TypeMirror))
         }
     }

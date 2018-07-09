@@ -16,8 +16,13 @@
 
 package com.chimerapps.moshigenerator
 
+import com.chimerapps.moshigenerator.utils.tracePerformance
 import java.util.*
-import javax.annotation.processing.*
+import javax.annotation.processing.AbstractProcessor
+import javax.annotation.processing.Filer
+import javax.annotation.processing.Messager
+import javax.annotation.processing.ProcessingEnvironment
+import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.TypeElement
@@ -29,6 +34,8 @@ import javax.tools.Diagnostic
  * @author Nicola Verbeeck
  * *         Date 23/05/2017
  */
+const val OPTION_PERFORMANCE_TRACE = "moshiGenPerformanceTrace"
+
 @SuppressWarnings("unused")
 class ProcessorFactory : AbstractProcessor() {
     private lateinit var filer: Filer
@@ -38,67 +45,78 @@ class ProcessorFactory : AbstractProcessor() {
     private lateinit var logger: SimpleLogger
 
     override fun process(annotations: Set<TypeElement>, roundEnv: RoundEnvironment): Boolean {
-        try {
-            if (roundEnv.processingOver()) {
-                return true
-            }
+        if (processingEnv.options[OPTION_PERFORMANCE_TRACE] != null)
+            tracePerformance = true
 
+        tracePerformance(logger, "Process") {
             try {
-                val classes = processDataClasses(roundEnv)
-                processFactory(roundEnv, classes)
-            } catch (annotationError: Exception) {
-                logger.logError(annotationError.message ?: "<Unknown error> ${annotationError.javaClass.canonicalName}", annotationError)
-                messager.printMessage(Diagnostic.Kind.ERROR, annotationError.message ?: "<Unknown error> ${annotationError.javaClass.canonicalName}")
-            }
+                if (roundEnv.processingOver()) {
+                    return true
+                }
 
-        } catch(e: Exception) {
-            messager.printMessage(Diagnostic.Kind.ERROR, "Failed to execute round: $e")
-            logger.logError(e.message ?: "", e)
+                try {
+                    val classes = processDataClasses(roundEnv)
+                    processFactory(roundEnv, classes)
+                } catch (annotationError: Exception) {
+                    logger.logError(annotationError.message
+                            ?: "<Unknown error> ${annotationError.javaClass.canonicalName}", annotationError)
+                    messager.printMessage(Diagnostic.Kind.ERROR, annotationError.message
+                            ?: "<Unknown error> ${annotationError.javaClass.canonicalName}")
+                }
+
+            } catch (e: Exception) {
+                messager.printMessage(Diagnostic.Kind.ERROR, "Failed to execute round: $e")
+                logger.logError(e.message ?: "", e)
+            }
         }
 
         return true
     }
 
     private fun processDataClasses(roundEnv: RoundEnvironment): List<MoshiAnnotatedClass> {
-        val classes = ArrayList<MoshiAnnotatedClass>()
+        tracePerformance(logger, "Process data classes") {
+            val classes = ArrayList<MoshiAnnotatedClass>()
 
-        for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshi::class.java)) {
-            if (element.kind !== ElementKind.CLASS) {
-                throw AnnotationError("Only classes can be annotated with @GenerateMoshi (${element.simpleName})")
+            for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshi::class.java)) {
+                if (element.kind !== ElementKind.CLASS) {
+                    throw AnnotationError("Only classes can be annotated with @GenerateMoshi (${element.simpleName})")
+                }
+
+                val typeElement = element as TypeElement
+                val clazz = MoshiAnnotatedClass(logger, typeElement, elementUtils, typeUtils)
+                clazz.checkValid()
+
+                classes.add(clazz)
+
+                AdapterGenerator(clazz, filer, elementUtils, logger).generate()
             }
-
-            val typeElement = element as TypeElement
-            val clazz = MoshiAnnotatedClass(logger, typeElement, elementUtils, typeUtils)
-            clazz.checkValid()
-
-            classes.add(clazz)
-
-            AdapterGenerator(clazz, filer, elementUtils, logger).generate()
+            return classes
         }
-        return classes
     }
 
     private fun processFactory(roundEnv: RoundEnvironment, classes: List<MoshiAnnotatedClass>) {
-        val knownClasses = hashSetOf<String>()
+        tracePerformance(logger, "Process factory") {
+            val knownClasses = hashSetOf<String>()
 
-        for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshiFactory::class.java)) {
-            val clazz = MoshiFactoryAnnotatedClass(element, logger)
+            for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshiFactory::class.java)) {
+                val clazz = MoshiFactoryAnnotatedClass(element, logger)
 
-            MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils).generate()
+                MoshiFactoryGenerator(clazz.className, clazz.targetPackage, clazz.moshiClasses, filer, elementUtils).generate()
 
-            clazz.moshiClasses.forEach {
-                if (knownClasses.contains(it.toString())) {
-                    messager.printMessage(Diagnostic.Kind.WARNING, "Class '$it' is registered in multiple factories")
-                } else {
-                    knownClasses.add(it.toString())
+                clazz.moshiClasses.forEach {
+                    if (knownClasses.contains(it.toString())) {
+                        messager.printMessage(Diagnostic.Kind.WARNING, "Class '$it' is registered in multiple factories")
+                    } else {
+                        knownClasses.add(it.toString())
+                    }
                 }
             }
-        }
 
-        classes.filter { !knownClasses.contains(it.element.qualifiedName.toString()) && !it.generatesFactory() }
-                .forEach {
-                    messager.printMessage(Diagnostic.Kind.WARNING, "Class '${it.element.qualifiedName}' is not registered in any factory")
-                }
+            classes.filter { !knownClasses.contains(it.element.qualifiedName.toString()) && !it.generatesFactory() }
+                    .forEach {
+                        messager.printMessage(Diagnostic.Kind.WARNING, "Class '${it.element.qualifiedName}' is not registered in any factory")
+                    }
+        }
     }
 
     override fun getSupportedSourceVersion(): SourceVersion {
@@ -118,4 +136,10 @@ class ProcessorFactory : AbstractProcessor() {
         logger = SimpleLogger(messager)
     }
 
+    override fun getSupportedOptions(): MutableSet<String> {
+        return super.getSupportedOptions().toMutableSet()
+                .apply {
+                    add(OPTION_PERFORMANCE_TRACE)
+                }
+    }
 }
