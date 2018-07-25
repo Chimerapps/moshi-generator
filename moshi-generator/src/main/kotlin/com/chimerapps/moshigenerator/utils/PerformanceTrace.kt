@@ -31,4 +31,3 @@ fun depthPrefix(): String {
         }
     }
 }
-

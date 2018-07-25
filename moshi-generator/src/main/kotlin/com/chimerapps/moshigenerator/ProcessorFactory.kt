@@ -56,6 +56,7 @@ class ProcessorFactory : AbstractProcessor() {
 
                 try {
                     val classes = processDataClasses(roundEnv)
+                    if (tracePerformance) logger.logInfo("Generated ${classes.size} adapter classes")
                     processFactory(roundEnv, classes)
                 } catch (annotationError: Exception) {
                     logger.logError(annotationError.message
@@ -98,6 +99,7 @@ class ProcessorFactory : AbstractProcessor() {
         tracePerformance(logger, "Process factory") {
             val knownClasses = hashSetOf<String>()
 
+            var factoryCount = 0
             for (element in roundEnv.getElementsAnnotatedWith(GenerateMoshiFactory::class.java)) {
                 val clazz = MoshiFactoryAnnotatedClass(element, logger)
 
@@ -110,12 +112,15 @@ class ProcessorFactory : AbstractProcessor() {
                         knownClasses.add(it.toString())
                     }
                 }
+                ++factoryCount
             }
 
             classes.filter { !knownClasses.contains(it.element.qualifiedName.toString()) && !it.generatesFactory() }
                     .forEach {
                         messager.printMessage(Diagnostic.Kind.WARNING, "Class '${it.element.qualifiedName}' is not registered in any factory")
                     }
+
+            if (tracePerformance) logger.logInfo("Generated $factoryCount factory classes")
         }
     }
 
