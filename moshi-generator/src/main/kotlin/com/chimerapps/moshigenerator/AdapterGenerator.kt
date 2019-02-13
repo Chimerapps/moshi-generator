@@ -121,6 +121,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         if (logging) {
             builder.addStatement("LOGGER.log(\$T.FINE, \"Reading json\")", ClassName.get(Level::class.java))
         }
+        builder.addStatement("if (reader.peek() == \$T.Token.NULL) return null", ClassName.get(JsonReader::class.java))
 
         val fields = clazz.fields
         for (variableElement in fields) {
