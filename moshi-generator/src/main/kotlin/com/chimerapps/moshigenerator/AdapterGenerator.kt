@@ -312,8 +312,9 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
     }
 
     private fun getJsonFieldName(variableElement: VariableElement): String {
-        val annotation = variableElement.getAnnotation(Json::class.java) ?: return variableElement.simpleName.toString()
-        return annotation.name
+        return variableElement.getAnnotation(Json::class.java)?.name
+                ?: variableElement.getAnnotation(JsonName::class.java)?.name
+                ?: return variableElement.simpleName.toString()
     }
 
     private fun valueAccessor(variableElement: VariableElement): String {

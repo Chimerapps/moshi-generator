@@ -18,6 +18,7 @@ package com.chimerapps.moshigenerator.example
 
 import com.chimerapps.moshigenerator.GenerateMoshi
 import com.chimerapps.moshigenerator.GenerateMoshiFactory
+import com.chimerapps.moshigenerator.JsonName
 import com.squareup.moshi.Json
 
 /**
@@ -41,4 +42,4 @@ data class WithDefaults(@Json(name = "nom") val name: String, @Transient val age
 class ClassWithParent(title: String, val item: Long, @Json(name = "renamed") withOtherNameInHere: Boolean) : SomeClass(title, withOtherNameInHere)
 
 @GenerateMoshi(debugLogs = true)
-open class SomeClass(val title: String, @field:Json(name = "renamed") @Json(name = "renamed") val withOtherName: Boolean)
+open class SomeClass(val title: String, @field:JsonName(name = "renamed") @JsonName(name = "renamed") val withOtherName: Boolean)
