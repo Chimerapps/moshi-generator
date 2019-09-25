@@ -16,8 +16,21 @@
 
 package com.chimerapps.moshigenerator
 
-import com.squareup.javapoet.*
-import com.squareup.moshi.*
+import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.CodeBlock
+import com.squareup.javapoet.FieldSpec
+import com.squareup.javapoet.JavaFile
+import com.squareup.javapoet.MethodSpec
+import com.squareup.javapoet.ParameterSpec
+import com.squareup.javapoet.ParameterizedTypeName
+import com.squareup.javapoet.TypeName
+import com.squareup.javapoet.TypeSpec
+import com.squareup.javapoet.WildcardTypeName
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
+import com.squareup.moshi.Moshi
 import java.io.IOException
 import java.lang.reflect.Type
 import java.util.logging.Level
@@ -165,6 +178,7 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         val builder = CodeBlock.builder()
 
         if (clazz.generatesWriter()) {
+            val writesNulls = clazz.writerSerializesNulls()
             builder.beginControlFlow("if (value == null)")
                     .addStatement("writer.nullValue()")
                     .addStatement("return")
@@ -173,8 +187,18 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
 
             val fields = clazz.writerFields
             for (variableElement in fields) {
-                builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
-                generateWriter(builder, variableElement)
+                if (writesNulls || !isNullable(variableElement)) {
+                    builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
+                    generateWriter(builder, variableElement, accessorOverride = null)
+                } else {
+                    builder.beginControlFlow("")
+                    builder.addStatement("final \$T __nullCheck = value.${valueAccessor(variableElement)}", TypeName.get(variableElement.asType()))
+                    builder.beginControlFlow("if (__nullCheck != null)")
+                    builder.addStatement("writer.name(\$S)", getJsonFieldName(variableElement))
+                    generateWriter(builder, variableElement, "__nullCheck")
+                    builder.endControlFlow()
+                    builder.endControlFlow()
+                }
             }
 
             builder.addStatement("writer.endObject()")
@@ -208,12 +232,12 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         }
     }
 
-    private fun generateWriter(builder: CodeBlock.Builder, variableElement: VariableElement) {
+    private fun generateWriter(builder: CodeBlock.Builder, variableElement: VariableElement, accessorOverride: String?) {
         val typeName = TypeName.get(variableElement.asType())
         if (typeName.isPrimitive || typeName.isBoxedPrimitive || typeName == ClassName.get(String::class.java)) {
-            generatePrimitiveWriter(builder, variableElement)
+            generatePrimitiveWriter(builder, variableElement, accessorOverride)
         } else {
-            generateDelegatedWriter(builder, typeName, variableElement)
+            generateDelegatedWriter(builder, typeName, variableElement, accessorOverride)
         }
     }
 
@@ -247,8 +271,11 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         }
     }
 
-    private fun generatePrimitiveWriter(builder: CodeBlock.Builder, variableElement: VariableElement) {
-        builder.addStatement("writer.value(value.${valueAccessor(variableElement)})")
+    private fun generatePrimitiveWriter(builder: CodeBlock.Builder, variableElement: VariableElement, accessorOverride: String?) {
+        if (accessorOverride != null)
+            builder.addStatement("writer.value($accessorOverride)")
+        else
+            builder.addStatement("writer.value(value.${valueAccessor(variableElement)})")
     }
 
     private fun generateDelegatedReader(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
@@ -266,14 +293,17 @@ class AdapterGenerator(private val clazz: MoshiAnnotatedClass, private val filer
         builder.add(subBuilder.build())
     }
 
-    private fun generateDelegatedWriter(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement) {
+    private fun generateDelegatedWriter(builder: CodeBlock.Builder, typeName: TypeName, variableElement: VariableElement, accessorOverride: String?) {
         val subBuilder = CodeBlock.builder()
         subBuilder.beginControlFlow("")
         subBuilder.addStatement("final \$T _adapter = moshi.adapter(" + makeType(typeName) + ")", ParameterizedTypeName.get(ClassName.get(JsonAdapter::class.java), typeName))
         if (logging) {
             subBuilder.addStatement("LOGGER.log(\$T.FINE, \"\tGot delegate adapter: {0}\", _adapter)", ClassName.get(Level::class.java))
         }
-        subBuilder.addStatement("_adapter.toJson(writer, value.${valueAccessor(variableElement)})")
+        if (accessorOverride != null)
+            subBuilder.addStatement("_adapter.toJson(writer, $accessorOverride)")
+        else
+            subBuilder.addStatement("_adapter.toJson(writer, value.${valueAccessor(variableElement)})")
         subBuilder.endControlFlow()
         builder.add(subBuilder.build())
     }

@@ -32,27 +32,35 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 public @interface GenerateMoshi {
 
-	/**
-	 * Flag indicating if the code generator should create a separate moshi factory that creates the adapter.
-	 *
-	 * @return True if the processor should create a separate moshi factory fot this class/adapter
-	 */
-	boolean generateFactory() default false;
+    /**
+     * Flag indicating if the code generator should create a separate moshi factory that creates the adapter.
+     *
+     * @return True if the processor should create a separate moshi factory fot this class/adapter
+     */
+    boolean generateFactory() default false;
 
-	/**
-	 * Flag indicating if json writer code should be generated. When false, the adapter will delegate writing json
-	 * to the "next adapter". When generating the writer, the system will try direct field access OR a javabean style
-	 * getter (getField_Name)
-	 *
-	 * @return True if you wish to generate json writer code in the adapter, false to have the adapter delegate
-	 */
-	boolean generateWriter() default true;
+    /**
+     * Flag indicating if json writer code should be generated. When false, the adapter will delegate writing json
+     * to the "next adapter". When generating the writer, the system will try direct field access OR a javabean style
+     * getter (getField_Name)
+     *
+     * @return True if you wish to generate json writer code in the adapter, false to have the adapter delegate
+     */
+    boolean generateWriter() default true;
 
-	/**
-	 * Flag indicating if the generator should insert debug logs into the generated adapter. Useful for debugging when
-	 * you cannot attach a debugger
-	 *
-	 * @return True if the generate should generate log statements for this adapter
-	 */
-	boolean debugLogs() default false;
+    /**
+     * Flag indicating if json writer code should serialize null values. When false, null values are not written to json. Defaults to true.
+     * When {@link #generateWriter()} is not true, this does nothing
+     *
+     * @return True if you wish the writer to write out nulls.
+     */
+    boolean writerSerializesNulls() default true;
+
+    /**
+     * Flag indicating if the generator should insert debug logs into the generated adapter. Useful for debugging when
+     * you cannot attach a debugger
+     *
+     * @return True if the generate should generate log statements for this adapter
+     */
+    boolean debugLogs() default false;
 }

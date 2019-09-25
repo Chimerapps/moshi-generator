@@ -43,3 +43,6 @@ class ClassWithParent(title: String, val item: Long, @Json(name = "renamed") wit
 
 @GenerateMoshi(debugLogs = true)
 open class SomeClass(val title: String, @field:JsonName(name = "renamed") @JsonName(name = "renamed") val withOtherName: Boolean)
+
+@GenerateMoshi(generateWriter = true, debugLogs = true, writerSerializesNulls = false)
+data class NestedNullable(val person: Simple?)

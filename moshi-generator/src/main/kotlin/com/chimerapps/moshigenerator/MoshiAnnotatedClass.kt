@@ -100,7 +100,7 @@ class MoshiAnnotatedClass(private val logger: SimpleLogger,
             for (childElement in element.enclosedElements) {
                 if (childElement.kind == ElementKind.FIELD) {
                     val asVariable = childElement as VariableElement
-                    if (!childElement.modifiers.contains(Modifier.VOLATILE) && !childElement.modifiers.contains(Modifier.STATIC)) {
+                    if (!childElement.modifiers.contains(Modifier.TRANSIENT) && !childElement.modifiers.contains(Modifier.STATIC)) {
                         if (childElement.modifiers.contains(Modifier.PUBLIC)
                                 || hasGetter("get${asVariable.simpleName.toString().capitalize()}", childElement.asType())
                                 || hasGetter("is${asVariable.simpleName.toString().capitalize()}", childElement.asType())
@@ -139,6 +139,10 @@ class MoshiAnnotatedClass(private val logger: SimpleLogger,
 
     fun generatesWriter(): Boolean {
         return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).generateWriter
+    }
+
+    fun writerSerializesNulls(): Boolean {
+        return element.getAnnotation<GenerateMoshi>(GenerateMoshi::class.java).writerSerializesNulls
     }
 
     fun debugLogs(): Boolean {
