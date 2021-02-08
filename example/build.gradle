@@ -2,7 +2,7 @@ group 'com.chimerapps'
 version '0.1.0'
 
 buildscript {
-    ext.kotlin_version = '1.2.41'
+    ext.kotlin_version = '1.4.21'
 
     repositories {
         mavenCentral()
